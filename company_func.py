@@ -2,6 +2,7 @@ import csv
 import json
 import psycopg2 as ps
 import base64 as b64
+budget_cap = 0.8
 
 
 def initialise_config():
@@ -34,7 +35,7 @@ def execute_query(sql_query: str, config: dict):
             with conn.cursor() as cursor:
                 cursor.execute(sql_query)
                 print("Successfully executed")
-                return True
+                return cursor.statusmessage
 
     except Exception as e:
         print(f"Failure on reading on database. Error : {e}")
@@ -42,6 +43,7 @@ def execute_query(sql_query: str, config: dict):
 
 
 if __name__ == '__main__':
+
     MENU = """
     1. Show all employess
     2. Show all employess by department
@@ -70,15 +72,47 @@ if __name__ == '__main__':
         case "3":
             pass
         case "4":
-            emps = read_from_database(sql_query="select emp_id, emp_name from company.employess",
+            emp = {}
+            emps = read_from_database(sql_query="select emp_id, emp_name, salary from company.employess",
                                       config=config)
             for emp in emps:
                 print(f"{emp['emp_id']}. {emp['emp_name']}")
             emp_pick = input("Selectati angajatul : ")
-            new_salary = input("Care este noul salariu ? ")
-            execute_query(f"UPDATE company.employess set salary = {new_salary} where emp_id = {emp_pick}", config)
+            for emp in emps:
+                if emp_pick == emp['emp_id']:
+                    break
+
+            budget = read_from_database(f"select sum(p.budget) from company.projects p join company.contracts c "
+                                        "on c.project_id = p.project_id join company.employess e "
+                                        f"on e.emp_id = c.emp_id where e.emp_id = {emp_pick}", config)
+            percentage = input("What is the raise in percentage ? ")
+            new_salary = emp['salary'] + emp['salary'] * float(percentage)/100
+
+            if new_salary < (budget[0]['sum'] * budget_cap):
+                response = execute_query(f"UPDATE company.employess set salary = {new_salary} where emp_id = {emp_pick}", config)
+                print(response)
+            else:
+                print("Not enaugh for the raise !")
         case "5":
-            pass
+            emps = read_from_database(sql_query="select emp_id, emp_name from company.employess order by emp_id",
+                                      config=config)
+            departments = read_from_database(
+                sql_query="select departament_id,departament_name from company.departments order by departament_id",
+                config=config)
+            new_emp_data = input("Enter all data about employee: name/dob/salary/starting_date: ")
+            new_emp_list = new_emp_data.split("/")
+
+            for emp in departments:
+                print(f"{emp['departament_id']}. {emp['departament_name']}")
+
+            department_choice = input("Pick: ")
+
+            if new_emp_list[0] not in str(emps):
+                execute_query(f"INSERT into company.employess "
+                              f"(emp_name,date_of_birth,salary,starting_date,department_id) "
+                              f"values('{new_emp_list[0]}', '{new_emp_list[1]}', {new_emp_list[2]}, "
+                              f"'{new_emp_list[3]}', {department_choice})", config)
+
         case "6":
             emps = read_from_database(sql_query="select emp_id, emp_name from company.employess order by emp_id",
                                       config=config)
@@ -87,6 +121,7 @@ if __name__ == '__main__':
             emp_pick = input("Selectati angajatul : ")
             consent = input("Are you want to fire this employee? Y/N : ")
             if consent.lower() == "y":
-                execute_query(f"DELETE from company.employess where emp_id = {emp_pick}", config)
+                response = execute_query(f"DELETE from company.employess where emp_id = {emp_pick}", config)
+                print(response)
         case _:
             print("Wrong options !")
