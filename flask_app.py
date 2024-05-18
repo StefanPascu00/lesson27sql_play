@@ -142,7 +142,7 @@ def create_contracts(emp_id: int):
                              f"values('{data['project_name']}', {data['budget']}, '{data['deadline']}'")
             company_func.execute_query(project_query, config)
 
-            project_id_result = company_func.read_from_database("select * from company.projects", config)
+            project_id_result = company_func.read_from_database("select * from company.projects order by project_id", config)
             project_id = project_id_result[-1]['project_id']
 
             company_query = (f"INSERT INTO company.contracts (contract_name,finishing_date,project_id,emp_id)"
