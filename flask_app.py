@@ -139,15 +139,15 @@ def create_contracts(emp_id: int):
         data = request.json
         if "project_name" in data and "budget" in data and "deadline" in data:
             project_query = (f"INSERT INTO company.projects(project_name,budget,deadline) "
-                             f"values('{data['project_name']}', {data['budget']}, '{data['deadline']}'")
+                             f"values('{data['project_name']}', {data['budget']}, '{data['deadline']}')")
             company_func.execute_query(project_query, config)
 
             project_id_result = company_func.read_from_database("select * from company.projects order by project_id", config)
             project_id = project_id_result[-1]['project_id']
 
             company_query = (f"INSERT INTO company.contracts (contract_name,finishing_date,project_id,emp_id)"
-                             f" values('{data['project_name']}', '{data['deadline']}', "
-                             f"{project_id}, {emp_id}")
+                             f" values('{'Contract ' + data['project_name']}', '{data['deadline']}', "
+                             f"{project_id}, {emp_id})")
             company_func.execute_query(company_query, config)
 
             return {"message": "Succesfuly create a new contract"}
